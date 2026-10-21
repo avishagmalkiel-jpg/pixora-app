@@ -1,0 +1,86 @@
+services:
+  database:
+    image: mongo:7.0
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:-pixora}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-pixora-local-only}
+      MONGO_INITDB_DATABASE: image_sharing_platform
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - backend-database
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mongosh --quiet --username \"$$MONGO_INITDB_ROOT_USERNAME\" --password \"$$MONGO_INITDB_ROOT_PASSWORD\" --authenticationDatabase admin --eval \"db.adminCommand('ping').ok\"",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  backend:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      PORT: 8000
+      MONGO_URI: mongodb://${MONGO_ROOT_USERNAME:-pixora}:${MONGO_ROOT_PASSWORD:-pixora-local-only}@database:27017/?authSource=admin
+      JWT_SECRET: ${JWT_SECRET:-pixora-local-jwt-secret-change-before-deployment}
+      CORS_ORIGIN: http://localhost:3000
+    depends_on:
+      database:
+        condition: service_healthy
+    networks:
+      - frontend-backend
+      - backend-database
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:8000/').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_BACKEND_API: /backend
+        BACKEND_INTERNAL_API: http://backend:8000
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+      NEXT_PUBLIC_BACKEND_API: /backend
+      BACKEND_INTERNAL_API: http://backend:8000
+      NEXTAUTH_URL: http://localhost:3000
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-pixora-local-nextauth-secret-change-before-deployment}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:3000:3000"
+    networks:
+      - frontend-backend
+
+volumes:
+  mongo-data:
+
+networks:
+  frontend-backend:
+    driver: bridge
+  backend-database:
+    driver: bridge
+    internal: true

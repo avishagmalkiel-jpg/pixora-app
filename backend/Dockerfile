@@ -1,5 +1,15 @@
-FROM openjdk:17-jdk-alpine
+FROM node:20-alpine
+
 WORKDIR /app
-COPY target/my-backend-app.jar app.jar
-EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
+
+COPY package*.json ./
+RUN npm ci --omit=dev --legacy-peer-deps
+
+COPY src ./src
+
+ENV NODE_ENV=production
+ENV PORT=8000
+
+EXPOSE 8000
+
+CMD ["node", "src/index.js"]

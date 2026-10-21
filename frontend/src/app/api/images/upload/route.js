@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import { cookies } from 'next/headers';
 
+const BACKEND_API = process.env.BACKEND_INTERNAL_API || process.env.NEXT_PUBLIC_BACKEND_API;
+
 export async function POST(request) {
   try {
     // Get the incoming formData
@@ -58,7 +60,7 @@ export async function POST(request) {
         headers['Cookie'] = `token=${authToken}`;
       }
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API}/api/images/upload`, {
+      const response = await fetch(`${BACKEND_API}/api/images/upload`, {
         method: 'POST',
         headers,
         body: forwardData,

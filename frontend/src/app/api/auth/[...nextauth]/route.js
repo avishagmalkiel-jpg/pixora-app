@@ -3,6 +3,8 @@ import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import axios from "axios";
 
+const BACKEND_API = process.env.BACKEND_INTERNAL_API || process.env.NEXT_PUBLIC_BACKEND_API;
+
 export const authOptions = {
   providers: [
     GoogleProvider({
@@ -18,7 +20,7 @@ export const authOptions = {
       async authorize(credentials) {
         try {
           const response = await axios.post(
-            `${process.env.NEXT_PUBLIC_BACKEND_API}/api/users/login`,
+            `${BACKEND_API}/api/users/login`,
             {
               identifier: credentials?.identifier,
               password: credentials?.password,
@@ -52,7 +54,7 @@ export const authOptions = {
         try {
           // Send user details to backend for saving in MongoDB
           const username = user.email.split('@')[0];
-          const response = await axios.post(`${process.env.NEXT_PUBLIC_BACKEND_API}/api/users/google-login`, {
+          const response = await axios.post(`${BACKEND_API}/api/users/google-login`, {
             email: user.email,
             fullName: user.name,
             profilePicture: user.image,
